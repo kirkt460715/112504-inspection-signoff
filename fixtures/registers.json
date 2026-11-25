@@ -1,0 +1,96 @@
+{
+  "towns": [
+    "district-p",
+    "district-q"
+  ],
+  "commission": {
+    "id": "mandate-2",
+    "issuer": "district-p",
+    "donor": "district-q",
+    "worksites": [
+      "culvert-4"
+    ],
+    "scopes": [
+      "structure"
+    ],
+    "from": "2028-07-03T08:00:00+08:00",
+    "to": "2028-07-03T16:00:00+08:00"
+  },
+  "workers": [
+    {
+      "id": "staff-1",
+      "district": "district-q",
+      "credential": "structure",
+      "roles": [
+        "lead"
+      ]
+    },
+    {
+      "id": "staff-2",
+      "district": "district-q",
+      "credential": "structure",
+      "roles": [
+        "lead",
+        "review"
+      ]
+    },
+    {
+      "id": "staff-3",
+      "district": "district-p",
+      "credential": "structure",
+      "roles": [
+        "review"
+      ]
+    }
+  ],
+  "assignment": {
+    "lead": "staff-1",
+    "review": "staff-2",
+    "substitute": "staff-2"
+  },
+  "recusal": {
+    "worker": "staff-1",
+    "site": "culvert-4",
+    "relationship_since": "2028-06-20",
+    "reported_at": "2028-07-04"
+  },
+  "replacement_at": "2028-07-03T12:15:00+08:00",
+  "credential_notes": [
+    {
+      "staff": "staff-1",
+      "valid_through": "2028-07-03T12:30:00+08:00"
+    },
+    {
+      "staff": "staff-2",
+      "valid_through": "2028-07-03T16:00:00+08:00"
+    },
+    {
+      "staff": "staff-3",
+      "valid_through": "2028-07-05T16:00:00+08:00"
+    }
+  ],
+  "dispositions": [
+    {
+      "id": "action-4",
+      "site": "culvert-4",
+      "signed_case": "review-2",
+      "released_at": "2028-07-03T15:00:00+08:00"
+    }
+  ],
+  "signatures": [
+    {
+      "case": "review-2",
+      "site": "culvert-4",
+      "worker": "staff-1",
+      "role": "lead",
+      "signed_at": "2028-07-03T11:20:00+08:00"
+    },
+    {
+      "case": "review-2",
+      "site": "culvert-4",
+      "worker": "staff-2",
+      "role": "review",
+      "signed_at": "2028-07-03T11:45:00+08:00"
+    }
+  ]
+}

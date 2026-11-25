@@ -1,0 +1,28 @@
+[
+  {
+    "operation": "evidence",
+    "request": {
+      "site": "culvert-4",
+      "observer": "staff-1",
+      "submission": "check-31"
+    },
+    "reply": {
+      "captured_at": "2028-07-03T09:10:00+08:00",
+      "signature_receipt": "proof-31"
+    },
+    "outcome": "commit_disconnect"
+  },
+  {
+    "operation": "evidence",
+    "request": {
+      "site": "culvert-4",
+      "observer": "staff-3",
+      "submission": "check-32"
+    },
+    "reply": {
+      "captured_at": "2028-07-03T13:40:00+08:00",
+      "signature_receipt": "proof-32"
+    },
+    "outcome": "success"
+  }
+]
