@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>区域联动台 · 跨县支援巡检</title>
+<style>
+  :root { --line:#d9dee7; --brand:#1f5fa8; --bad:#b3261e; --warn:#8a5a00; --ok:#1e7a3c; --bg:#f4f6fa; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.55 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:#1c2430; }
+  header { background:#103a63; color:#fff; padding:14px 22px; display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; }
+  header h1 { font-size:18px; margin:0; }
+  header .sub { opacity:.8; font-size:12.5px; }
+  nav { display:flex; gap:6px; padding:10px 18px 0; background:#fff; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  nav button { border:1px solid var(--line); border-bottom:none; background:#eef2f8; padding:8px 16px; border-radius:8px 8px 0 0; cursor:pointer; font-size:14px; }
+  nav button.active { background:#fff; color:var(--brand); font-weight:600; position:relative; top:1px; }
+  main { padding:18px 22px; max-width:1180px; margin:0 auto; }
+  .panel { display:none; } .panel.active { display:block; }
+  .bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+  input, select, button.btn { padding:7px 10px; border:1px solid var(--line); border-radius:6px; font-size:13.5px; background:#fff; }
+  button.btn { background:var(--brand); color:#fff; border-color:var(--brand); cursor:pointer; }
+  button.ghost { background:#fff; color:var(--brand); }
+  button.mini { padding:3px 9px; font-size:12.5px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); gap:14px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  .card h3 { margin:0 0 8px; font-size:15px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { text-align:left; padding:6px 8px; border-bottom:1px solid #eef1f6; vertical-align:top; }
+  th { color:#5a6b82; font-weight:600; }
+  .tag { display:inline-block; padding:1px 8px; border-radius:999px; font-size:12px; border:1px solid transparent; white-space:nowrap; }
+  .tag.ok { background:#e7f6ec; color:var(--ok); border-color:#bfe3cb; }
+  .tag.bad { background:#fdecea; color:var(--bad); border-color:#f3c1bd; }
+  .tag.warn { background:#fff4dd; color:var(--warn); border-color:#ecd39a; }
+  .tag.info { background:#e8f1fc; color:var(--brand); border-color:#c2d9f4; }
+  .muted { color:#6b788c; font-size:12.5px; }
+  .missing li { color:var(--bad); }
+  pre.json { background:#0f1b2d; color:#cfe3ff; padding:12px; border-radius:8px; overflow:auto; max-height:360px; font-size:12px; }
+  .row-actions { display:flex; gap:6px; flex-wrap:wrap; }
+  .toast { position:fixed; right:18px; bottom:18px; background:#103a63; color:#fff; padding:10px 14px; border-radius:8px; opacity:0; transition:.25s; max-width:420px; }
+  .toast.show { opacity:1; }
+  .kpi { font-size:22px; font-weight:700; }
+  .kpi.bad { color:var(--bad); } .kpi.ok { color:var(--ok); }
+</style>
+</head>
+<body>
+<header>
+  <h1>区域联动台</h1>
+  <span class="sub">跨县借人 · 现场分工 · 资格/回避判定 · 结论签认（虚构组织 · 本地联调）</span>
+  <span style="flex:1"></span>
+  <span class="sub" id="clock"></span>
+</header>
+<nav>
+  <button data-tab="recipient" class="active">受援县 · 复核齐备性</button>
+  <button data-tab="donor">派出方 · 派工交接</button>
+  <button data-tab="field">现场人员 · 可办事项</button>
+  <button data-tab="ops">演练与联调</button>
+</nav>
+<main>
+  <!-- 受援县 -->
+  <section id="recipient" class="panel active">
+    <div class="bar">
+      <label>受援县 <input id="rcp-district" value="district-p" /></label>
+      <label>对象 <input id="rcp-object" value="culvert-4" style="width:130px" /></label>
+      <label>视角时间(可选) <input id="rcp-at" placeholder="2028-07-04T10:00:00+08:00" style="width:250px" /></label>
+      <button class="btn" onclick="loadReadiness()">查询对象齐备性</button>
+      <button class="btn ghost" onclick="loadRecipient()">全县总览</button>
+    </div>
+    <div id="rcp-summary" class="grid"></div>
+    <div id="rcp-detail" style="margin-top:14px"></div>
+  </section>
+
+  <!-- 派出方 -->
+  <section id="donor" class="panel">
+    <div class="bar">
+      <label>派出县 <input id="don-district" value="district-q" /></label>
+      <button class="btn" onclick="loadDonor()">查看派工与交接</button>
+    </div>
+    <div id="donor-view" class="grid"></div>
+  </section>
+
+  <!-- 现场 -->
+  <section id="field" class="panel">
+    <div class="bar">
+      <label>巡检员
+        <select id="field-worker">
+          <option value="staff-1">staff-1（结构 · lead）</option>
+          <option value="staff-2" selected>staff-2（结构 · lead/review）</option>
+          <option value="staff-3">staff-3（district-p · review）</option>
+        </select>
+      </label>
+      <label>时间 <input id="field-at" placeholder="默认当前，可填 2028-07-03T10:00:00+08:00" style="width:260px" /></label>
+      <button class="btn" onclick="loadBench()">加载我的可办事项</button>
+    </div>
+    <div id="field-view"></div>
+  </section>
+
+  <!-- 演练 -->
+  <section id="ops" class="panel">
+    <div class="bar">
+      <button class="btn" onclick="seedFixtures(false)">导入/重放 fixtures 台账</button>
+      <button class="btn ghost" onclick="seedFixtures(true)">清空并重建台账</button>
+      <button class="btn ghost" onclick="fetchEvidence('check-31','staff-1')">联调取回 check-31（断连样例）</button>
+      <button class="btn ghost" onclick="fetchEvidence('check-32','staff-3')">联调取回 check-32</button>
+      <button class="btn ghost" onclick="loadState()">导出台账 JSON</button>
+    </div>
+    <p class="muted">采证联调需另在 <code>127.0.0.1:8765</code> 运行 <code>python3 partner_stub.py --port 8765</code>；
+      断连样例由服务端用同一操作 ID 自动查询/幂等重提。</p>
+    <pre class="json" id="ops-out">操作结果会显示在这里。</pre>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+function toast(msg, bad) {
+  const t = $('toast'); t.textContent = msg;
+  t.style.background = bad ? '#b3261e' : '#103a63';
+  t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3200);
+}
+async function api(method, path, body) {
+  const opt = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body !== undefined) opt.body = JSON.stringify(body);
+  const resp = await fetch(path, opt);
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw Object.assign(new Error(data.message || resp.status), { data, status: resp.status });
+  return data;
+}
+function tag(text, kind) { return `<span class="tag ${kind||'info'}">${text}</span>`; }
+function stateTag(s) {
+  return { valid: tag('有效','ok'), missing: tag('缺失','bad'), tainted: tag('受迟报回避影响','bad'),
+           rejected: tag('签署时不合格','warn') }[s] || tag(s);
+}
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+  b.classList.add('active'); $(b.dataset.tab).classList.add('active');
+  if (b.dataset.tab === 'donor') loadDonor();
+  if (b.dataset.tab === 'field') loadBench();
+  if (b.dataset.tab === 'recipient') loadReadiness();
+});
+
+async function loadReadiness() {
+  const obj = $('rcp-object').value.trim();
+  const at = $('rcp-at').value.trim();
+  try {
+    const q = at ? `?at=${encodeURIComponent(at)}` : '';
+    const r = await api('GET', `/objects/${encodeURIComponent(obj)}/readiness${q}`);
+    $('rcp-summary').innerHTML = `
+      <div class="card"><h3>${r.object_id} 复核状态</h3>
+        <div class="kpi ${r.ready?'ok':'bad'}">${r.ready ? '齐备' : '未齐备'}</div>
+        <p class="muted">${r.summary_zh||''}</p>
+        <div>${r.ready ? tag('可形成/维持结论','ok') : tag('不得按已齐备结论结案','bad')}</div>
+      </div>
+      <div class="card"><h3>尚缺项</h3>
+        <ul class="missing">${(r.missing_labels_zh||r.missing||[]).map(m=>`<li>${m}</li>`).join('') || '<li style="color:var(--ok)">无</li>'}</ul>
+        ${r.independence_problems?.length ? `<p>${r.independence_problems.map(x=>tag(x,'bad')).join(' ')}</p>`:''}
+      </div>
+      <div class="card"><h3>签名要求</h3>
+        <table><tr><th>主检</th><td>${stateTag(r.requirements.lead.state)} ${r.requirements.lead.worker||''} <span class="muted">${r.requirements.lead.signed_at||''}</span></td></tr>
+        <tr><th>独立复核</th><td>${stateTag(r.requirements.independent_review.state)} ${r.requirements.independent_review.worker||''} <span class="muted">${r.requirements.independent_review.signed_at||''}</span></td></tr></table>
+      </div>`;
+    const ev = (r.evidence||[]).map(e => `<tr><td>${e.evidence_id}</td><td>${e.observer||''}</td>
+        <td>${e.captured_at||''}</td><td>${e.usable?tag('可沿用','ok'):tag('不可独立沿用','warn')}</td>
+        <td class="muted">${(e.reasons||[]).join(', ')}</td></tr>`).join('');
+    const disp = (r.dispositions||[]).map(d => `<tr><td>${d.id}</td><td>${d.action_type||''}</td>
+        <td>${d.status==='reconsideration_required'?tag('需复议','bad'):tag(d.status,'ok')}</td></tr>`).join('');
+    const revs = (r.open_reviews||[]).map(x=>`<li>${x.id} <span class="muted">${x.reason||''}</span></li>`).join('');
+    $('rcp-detail').innerHTML = `<div class="grid">
+      <div class="card"><h3>采证记录（不自动充当复核签名）</h3>
+        <table><thead><tr><th>编号</th><th>采集人</th><th>实际采集时间</th><th>可用性</th><th>原因</th></tr></thead><tbody>${ev||'<tr><td colspan=5 class=muted>暂无</td></tr>'}</tbody></table></div>
+      <div class="card"><h3>处置单</h3><table><tbody>${disp||'<tr><td class=muted>暂无</td></tr>'}</tbody></table>
+        <h3 style="margin-top:12px">进行中的复核程序</h3><ul>${revs||'<li class=muted>无</li>'}</ul></div>
+    </div>`;
+  } catch (e) { toast('查询失败：' + e.message, true); }
+}
+
+async function loadRecipient() {
+  const d = $('rcp-district').value.trim();
+  try {
+    const r = await api('GET', `/recipient/${encodeURIComponent(d)}`);
+    const rows = (r.objects||[]).map(o => `<tr><td>${o.object_id}</td>
+      <td>${o.ready?tag('齐备','ok'):tag('缺：'+(o.missing||[]).join(','),'bad')}</td>
+      <td>${(o.dispositions||[]).map(x=>x.status==='reconsideration_required'?tag(x.id+' 需复议','bad'):tag(x.id,'info')).join(' ')}</td></tr>`).join('');
+    $('rcp-detail').innerHTML = `<div class="card"><h3>${d} 全县对象总览</h3>
+      <table><thead><tr><th>对象</th><th>复核</th><th>处置单</th></tr></thead><tbody>${rows||'<tr><td colspan=3 class=muted>暂无委托/对象，可先到“演练与联调”导入台账</td></tr>'}</tbody></table></div>`;
+  } catch (e) { toast('总览失败：' + e.message, true); }
+}
+
+async function loadDonor() {
+  const d = $('don-district').value.trim();
+  try {
+    const r = await api('GET', `/donors/${encodeURIComponent(d)}`);
+    $('donor-view').innerHTML = (r.workers||[]).map(({worker:w,current_checks:cur,handovers_from:hf,handovers_to:ht}) => `
+      <div class="card"><h3>${w.id} <span class="muted">${(w.roles||[]).join('/')} · ${w.credential||''}</span></h3>
+        <p>${w.valid_through? '资质至 '+w.valid_through : ''}</p>
+        <table><thead><tr><th>当前在办</th><th>类别</th><th>状态</th></tr></thead><tbody>
+        ${cur.map(c=>`<tr><td>${c.id}<div class=muted>${c.object_id||c.site||''}</div></td><td>${c.category||''}</td><td>${tag(c.status,'info')}</td></tr>`).join('') || '<tr><td colspan=3 class=muted>无在办</td></tr>'}
+        </tbody></table>
+        <p class="muted">交出交接 ${hf.length} 次 · 承接交接 ${ht.length} 次</p>
+        ${[...hf,...ht].map(h=>`<div class="muted">${h.at||''} ${h.from_worker||''}→${h.to_worker||''} ${h.assumed_unfinished_lead?tag('承接未结主检','warn'):tag('值守替换/已结事项','info')}</div>`).join('')}
+      </div>`).join('') || '<p class=muted>暂无人员</p>';
+  } catch (e) { toast('派出方视图失败：' + e.message, true); }
+}
+
+async function loadBench() {
+  const w = $('field-worker').value; const at = $('field-at').value.trim();
+  try {
+    const r = await api('GET', `/workers/${w}/workbench${at?`?at=${encodeURIComponent(at)}`:''}`);
+    const claim = (r.claimable||[]).map(c=>`<tr><td>${c.id}</td><td>${c.check_kind}</td><td>${c.category||''}</td><td>${c.object_id||c.site||''}</td>
+      <td><button class="btn mini" onclick="claim('${c.id}','${w}')">领取并开始</button></td></tr>`).join('');
+    const sub = (r.submittable||[]).map(c=>`<tr><td>${c.id}</td><td>${c.object_id||c.site||''}</td><td>${tag(c.status,'info')}</td>
+      <td class="row-actions"><button class="btn mini" onclick="submitRec('${c.id}','${w}')">提交现场记录</button>
+      <button class="btn mini ghost" onclick="handover('${c.id}')">移交他人</button></td></tr>`).join('');
+    const blocked = (r.blocked||[]).map(b=>`<tr><td>${b.check_id}</td><td class=muted>${(b.reasons||[]).join(', ')}</td></tr>`).join('');
+    $('field-view').innerHTML = `<div class="grid">
+      <div class="card"><h3>可领取（未开始 + 资质覆盖）</h3><table><tbody>${claim||'<tr><td class=muted>当前没有可领事项</td></tr>'}</tbody></table></div>
+      <div class="card"><h3>我在办、可提交</h3><table><tbody>${sub||'<tr><td class=muted>没有在办事项</td></tr>'}</tbody></table></div>
+      <div class="card"><h3>暂不可办（原因）</h3><table><tbody>${blocked||'<tr><td class=muted>无</td></tr>'}</tbody></table></div>
+    </div>`;
+  } catch (e) { toast('工作台失败：' + e.message, true); }
+}
+async function claim(id,w) {
+  try { await api('POST',`/checks/${id}/claim`,{worker_id:w,at:$('field-at').value||undefined}); toast('已领取 '+id); loadBench(); }
+  catch(e){ toast('领取被拒：'+e.message,true); }
+}
+async function submitRec(id,w) {
+  const content = prompt('现场记录内容：','现场核查无异常/记录见证据回执'); if(content===null) return;
+  try { await api('POST',`/checks/${id}/submit`,{worker_id:w,content,complete:false,at:$('field-at').value||undefined}); toast('记录已提交（原署名保留）'); loadBench(); }
+  catch(e){ toast('提交失败：'+e.message,true); }
+}
+async function handover(id) {
+  const to = prompt('移交给哪位巡检员？','staff-2'); if(!to) return;
+  try { const r=await api('POST',`/checks/${id}/handover`,{to_worker:to,at:$('field-at').value||undefined});
+    toast(r.handover.assumed_unfinished_lead ? '已移交：承接的是未结主检，将触发独立签字限制' : '已移交'); loadBench(); }
+  catch(e){ toast('移交被拒：'+e.message,true); }
+}
+async function seedFixtures(reset) {
+  try { const r = await api('POST', reset?'/admin/seed-fixtures?reset=1':'/admin/seed-fixtures', reset?{reset:true}:{});
+    $('ops-out').textContent = JSON.stringify(r,null,2); toast('台账已导入'); }
+  catch(e){ $('ops-out').textContent = '导入失败：'+e.message; toast(e.message,true); }
+}
+async function fetchEvidence(submission, observer) {
+  try { const r = await api('POST','/integrations/evidence',{site:'culvert-4',observer,submission});
+    $('ops-out').textContent = JSON.stringify(r,null,2); toast('采证材料已交回：'+r.evidence.signature_receipt); }
+  catch(e){ $('ops-out').textContent = '联调失败（partner_stub 是否在 8765？）：'+(e.data?JSON.stringify(e.data):e.message); toast('联调失败',true); }
+}
+async function loadState() {
+  const r = await api('GET','/admin/state'); $('ops-out').textContent = JSON.stringify(r,null,2);
+}
+setInterval(()=>{ $('clock').textContent = new Date().toLocaleString('zh-CN'); },1000);
+loadReadiness();
+</script>
+</body>
+</html>

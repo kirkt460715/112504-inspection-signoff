@@ -10,3 +10,8 @@ coverage/
 __pycache__/
 *.py[cod]
 .DS_Store
+*.sqlite3
+*.sqlite3-journal
+*.db
+desk-run.log
+partner-run.log
